@@ -271,7 +271,14 @@ hardware_interface::return_type TopicBasedSystem::write(const rclcpp::Time& /*ti
       joint_states_[POSITION_INTERFACE_INDEX].cbegin(), joint_states_[POSITION_INTERFACE_INDEX].cend(),
       joint_commands_[POSITION_INTERFACE_INDEX].cbegin(), 0.0,
       [](const auto d1, const auto d2) { return std::abs(d1) + std::abs(d2); }, std::minus<double>{});
-  if (diff <= trigger_joint_command_threshold_)
+
+  // Also check if there are any velocity commands to be sent
+  double sum = 0.0;
+  for (double v : joint_commands_[VELOCITY_INTERFACE_INDEX])
+    sum += std::abs(v);
+
+  // If both position difference and velocity commands are negligible, skip publishing
+  if (diff <= trigger_joint_command_threshold_ && sum == 0.0)
   {
     return hardware_interface::return_type::OK;
   }
